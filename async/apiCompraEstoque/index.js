@@ -46,7 +46,6 @@ app.post('/comprasEstoque', async (req, res) => {
 
             setTimeout(() => {
                 channel.close();
-                connection.close();
             })
         }
     } catch (error) {
