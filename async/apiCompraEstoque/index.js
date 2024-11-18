@@ -1,65 +1,50 @@
 const express = require('express');
 const amqp = require('amqplib');
-const axios = require('axios');
 const app = express();
 const port = 3004;
 
 app.use(express.json());
 
-let compras = [];
-
 let channel;
+let connection;
+
+// Conectar ao RabbitMQ
 async function connectRabbitMQ() {
-    const connection = await amqp.connect('amqp://localhost');
-    channel = await connection.createChannel();
-    await channel.assertQueue('estoque.atualizar', {durable: true});
+    try {
+        connection = await amqp.connect('amqp://localhost');
+        channel = await connection.createChannel();
+        await channel.assertQueue('estoque.atualizar', { durable: true });
+        console.log('Conectado ao RabbitMQ');
+    } catch (error) {
+        console.error('Erro ao conectar ao RabbitMQ:', error);
+        setTimeout(connectRabbitMQ, 5000); // Tentar reconectar após 5 segundos
+    }
 }
 connectRabbitMQ();
-
-app.get('/comprasEstoque', (req, res) => {
-    res.json(compras);
-});
 
 app.post('/comprasEstoque', async (req, res) => {
     const compra = req.body;
 
     try {
-        const response = await axios.get(`http://localhost:3003/estoque/${compra.produtoId}`);
-        if (response.status === 200) {
-            const produto = response.data;
+        if (!channel) throw new Error('Canal RabbitMQ não está conectado.');
 
-            produto.quantidade = produto.quantidade + compra.novaQuantidade;
+        // Adicionar compra à fila
+        channel.sendToQueue(
+            'estoque.atualizar',
+            Buffer.from(JSON.stringify(compra)),
+            { persistent: true }
+        );
 
-            compra.id = compras.length + 1;
-            compras.push(compra);
+        console.log('Compra enviada para a fila:', compra);
 
-            channel.sendToQueue(
-                'estoque.atualizar',
-                Buffer.from(
-                    JSON.stringify({ produtoId: compra.produtoId, novaQuantidade: produto.quantidade })
-                ),
-                {persistent: true}
-            );
-            console.log('Mensagem enviada para o RabbitMQ:', { produtoId: compra.produtoId, novaQuantidade: produto.quantidade });
-
-            res.json(compra);
-
-            setTimeout(() => {
-                channel.close();
-            })
-        }
+        res.json({
+            status: 'pendente',
+            mensagem: 'Compra registrada e enviada para processamento.',
+        });
     } catch (error) {
-        console.error("Erro ao enviar a mensagem", error)
+        console.error('Erro ao processar compra:', error);
+        res.status(500).json({ mensagem: 'Erro ao processar a solicitação' });
     }
 });
 
-app.get('/comprasEstoque/:id', (req, res) => {
-    const compra = compras.find((m) => m.id === parseInt(req.params.id));
-    if (compra) {
-        res.json(compra);
-    } else {
-        res.status(404).send('Compra not found');
-    }
-});
-
-app.listen(port, () => console.log(`Servidor Compras Estoque iniciado na porta ${port}`));
+app.listen(port, () => console.log(`API Compras Estoque iniciada na porta ${port}`));
