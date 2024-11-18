@@ -15,7 +15,7 @@ async function startServer() {
     const channel = await connection.createChannel();
     const queue = 'registrarVenda';
 
-    await channel.assertQueue(queue, { durable: false });
+    await channel.assertQueue(queue, { durable: true });
 
     console.log('Aguardando mensagens na fila:', queue);
 
@@ -44,7 +44,7 @@ async function startServer() {
             channel.sendToQueue(
                 msg.properties.replyTo,
                 Buffer.from(JSON.stringify(response)),
-                { correlationId: msg.properties.correlationId }
+                { correlationId: msg.properties.correlationId, persistent: true }
             );
 
             channel.ack(msg);
