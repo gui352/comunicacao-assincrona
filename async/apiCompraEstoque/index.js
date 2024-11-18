@@ -12,7 +12,7 @@ let channel;
 async function connectRabbitMQ() {
     const connection = await amqp.connect('amqp://localhost');
     channel = await connection.createChannel();
-    await channel.assertQueue('estoque.atualizar');
+    await channel.assertQueue('estoque.atualizar', {durable: true});
 }
 connectRabbitMQ();
 
@@ -37,14 +37,20 @@ app.post('/comprasEstoque', async (req, res) => {
                 'estoque.atualizar',
                 Buffer.from(
                     JSON.stringify({ produtoId: compra.produtoId, novaQuantidade: produto.quantidade })
-                )
+                ),
+                {persistent: true}
             );
             console.log('Mensagem enviada para o RabbitMQ:', { produtoId: compra.produtoId, novaQuantidade: produto.quantidade });
 
             res.json(compra);
+
+            setTimeout(() => {
+                channel.close();
+                connection.close();
+            })
         }
     } catch (error) {
-        res.status(404).send('Produto not found');
+        console.error("Erro ao enviar a mensagem", error)
     }
 });
 
@@ -57,4 +63,4 @@ app.get('/comprasEstoque/:id', (req, res) => {
     }
 });
 
-app.listen(port, () => console.log(`Servidor ComprasEstoque iniciado na porta ${port}`));
+app.listen(port, () => console.log(`Servidor Compras Estoque iniciado na porta ${port}`));

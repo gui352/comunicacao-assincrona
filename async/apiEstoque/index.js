@@ -13,7 +13,9 @@ const produtos = [
 async function connectRabbitMQ() {
     const connection = await amqp.connect('amqp://localhost');
     const channel = await connection.createChannel();
-    await channel.assertQueue('estoque.atualizar');
+    await channel.assertQueue('estoque.atualizar', {durable: true});
+
+    console.log(`Aguardando mensagens ${queue}. Para sair, pressione CTRL+C`);
 
     channel.consume('estoque.atualizar', (message) => {
         if (message !== null) {
