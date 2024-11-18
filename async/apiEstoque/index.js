@@ -15,7 +15,7 @@ async function connectRabbitMQ() {
     const channel = await connection.createChannel();
     await channel.assertQueue('estoque.atualizar', {durable: true});
 
-    console.log(`Aguardando mensagens ${queue}. Para sair, pressione CTRL+C`);
+    console.log(`Aguardando mensagens. Para sair, pressione CTRL+C`);
 
     channel.consume('estoque.atualizar', (message) => {
         if (message !== null) {
