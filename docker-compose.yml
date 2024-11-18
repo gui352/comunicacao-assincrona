@@ -1,0 +1,42 @@
+version: "3"
+
+services:
+
+  http:
+    build: ./http
+    entrypoint: ./.docker/entrypoint.sh
+    container_name: nodejs-rabbitmq-http
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - 3001:3000
+    volumes:
+      - ./http:/home/node/http
+    depends_on: 
+      - rabbitmq
+
+  rpc:
+    build: ./rpc
+    entrypoint: ./.docker/entrypoint.sh
+    container_name: nodejs-rabbitmq-rpc
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - 3000:3000
+    volumes:
+      - ./rpc:/home/node/rpc
+    depends_on: 
+      - rabbitmq
+
+  rabbitmq:
+    image: "rabbitmq:3.8-management-alpine"
+    container_name: nodejs-rabbitmq-rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - "./.rabbitmq_data:/var/lib/rabbitmq/mnesia"
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin

@@ -1,0 +1,15 @@
+POST http://localhost:3001/http
+content-type: application/json
+
+{
+    "name": "eu sou http"
+}
+
+###
+
+POST http://localhost:3000/rpc
+content-type: application/json
+
+{
+    "name": "eu sou rpc"
+}
